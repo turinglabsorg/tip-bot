@@ -13,7 +13,7 @@ async function parseMsg(msg) {
     }
 
     //Else, print that the command doesn't exist.
-    msg.obj.reply("That is not a command. Run \"!help\" to get a list of commands or edit your last message.");
+    msg.obj.reply("That is not a command. Run \"" + process.settings.discord.symbol + "help\" to get a list of commands or edit your last message.");
 }
 
 //Prepares, verifies, and formats a message.
@@ -31,9 +31,9 @@ async function handleMessage(msg) {
         return item !== "";
     });
 
-    //If the start of the message, is a ping to the bot, swap it for !.
+    //If the start of the message, is a ping to the bot, swap it for process.settings.discord.symbol.
     if (text[0] === process.settings.discord.user) {
-        text[1] = "!" + text[1];
+        text[1] = process.settings.discord.symbol + text[1];
         //Also remove the ping.
         text.splice(0, 1);
     }
@@ -42,7 +42,7 @@ async function handleMessage(msg) {
     text = text.join(" ");
 
     //If the message's first character is not the activation symbol, return.
-    if (text.substr(0, 1) !== "!") {
+    if (text.substr(0, 1) !== process.settings.discord.symbol) {
         return;
     }
 

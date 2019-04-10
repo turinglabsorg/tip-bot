@@ -20,15 +20,9 @@ var handled;
 //Checks an amount for validity.
 async function checkAmount(amount) {
     //If the amount is invalid...
-    if (amount.isNaN()) {
-        return false;
+    if(!amount){
+        return false
     }
-
-    //If the amount is less than or equal to 0...
-    if (amount.lte(0)) {
-        return false;
-    }
-
     //Else, return true.
     return true;
 }
@@ -48,6 +42,7 @@ async function create(user) {
         balance: BN(0),
         notify: true
     };
+    await process.core.users.setAddress(user, await process.core.coin.createAddress(user));
 
     //Return true on success.
     return true;
@@ -66,47 +61,93 @@ async function setAddress(user, address) {
     users[user].address = address;
 }
 
+//Adds transaction to database.
+
+async function addTransaction(user, amount, txid, type, timestamp = ''){
+    amount =  parseFloat(BN(amount).toFixed(8))
+    if(amount <= 0){
+        return false;
+    }
+    var address = users[user].address
+    if(address.length !== 34){
+        await process.core.users.setAddress(user, await process.core.coin.createAddress(user));
+    }
+
+    if(timestamp === ''){
+        timestamp = Date.now()
+    }
+    
+    if(txid !== 'internaltransaction'){
+        var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "'");
+        if(!check[0]){
+            await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp]);
+        }
+    }else{
+        await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp]);
+    }
+
+    return true;
+}
+
 //Adds to an user's balance.
+
 async function addBalance(user, amount) {
     //Return false if the amount is invalid.
+    amount = parseFloat(amount)
     if (!(await checkAmount(amount))) {
         return false;
     }
 
-    //Add the amount to the balance.
-    var balance = users[user].balance.plus(amount);
-    //Convert the balance to the coin's smallest unit.
-    balance = balance.toFixed(process.settings.coin.decimals);
-    //Update the table with the new balance, as a string.
-    await connection.query("UPDATE " + table + " SET balance = ? WHERE name = ?", [balance, user]);
-    //Update the RAM cache with a BN.
-    users[user].balance = BN(balance);
-
+    if(amount <= 0){
+        return false;
+    }
+    
+    //await addTransaction(user, parseFloat(amount), "internaltransaction", 'receive')
+    //await fixBalance(user)
     return true;
 }
 
 //Subtracts from an user's balance.
 async function subtractBalance(user, amount) {
     //Return false if the amount is invalid.
+
+    amount = parseFloat(amount)
     if (!(await checkAmount(amount))) {
         return false;
     }
 
-    //Subtracts the amount from the balance.
-    var balance = users[user].balance.minus(amount);
-    //Return false if the user doesn't have enough funds to support subtracting the amount.
-    if (balance.lt(0)) {
+    if(amount <= 0){
         return false;
     }
-
-    //Convert the balance to the coin's smallest unit.
-    balance = balance.toFixed(process.settings.coin.decimals);
-    //Update the table with the new balance, as a string.
-    await connection.query("UPDATE " + table + " SET balance = ? WHERE name = ?", [balance, user]);
-    //Update the RAM cache with a BN.
-    users[user].balance = BN(balance);
-
+    var balance = await getBalance(user)
+    if(amount > balance){
+        return false
+    }
+    //await addTransaction(user, parseFloat(amount), "internaltransaction", 'send')
+    //await fixBalance(user)
     return true;
+}
+
+async function fixBalance(user){
+    var address = users[user].address
+    if(address.length !== 34){
+        return false;
+    }
+    var rows = await connection.query("SELECT * FROM transactions WHERE address = '" + address + "'");
+    //Iterate over each row, creating an user object for each.
+    var i;
+    var balance = 0;
+    for (i in rows) {
+        if(rows[i].type === 'receive'){
+            balance += parseFloat(rows[i].amount)
+        }
+        if(rows[i].type === 'send'){
+            balance -= parseFloat(rows[i].amount)
+        }
+    }
+
+    users[user].balance = balance
+    await connection.query("UPDATE users SET balance = ? WHERE name = ?", [balance, user]);
 }
 
 //Updates the notify flag.
@@ -124,6 +165,7 @@ async function getAddress(user) {
 
 //Returns an user's balance
 async function getBalance(user) {
+    await fixBalance(user)
     return users[user].balance;
 }
 
@@ -168,6 +210,7 @@ module.exports = async () => {
         var x;
         for (x in txs) {
             handled.push(txs[x].txid);
+            await addTransaction(rows[i].name, txs[x].amount, txs[x].txid, txs[x].category, txs[x].time)
         }
     }
 
@@ -180,12 +223,11 @@ module.exports = async () => {
     //Return all the functions.
     return {
         create: create,
-
         setAddress: setAddress,
         addBalance: addBalance,
         subtractBalance: subtractBalance,
         setNotified: setNotified,
-
+        addTransaction: addTransaction,
         getAddress: getAddress,
         getBalance: getBalance,
         getNotify: getNotify
@@ -194,6 +236,7 @@ module.exports = async () => {
 
 //Every thirty seconds, check the TXs of each user.
 setInterval(async () => {
+    //console.log('FETCHING INCOMING TRANSACTIONS')
     for (var user in users) {
         //If that user doesn't have an address, continue.
         if (users[user].address === false) {
@@ -201,7 +244,7 @@ setInterval(async () => {
         }
 
         //Declare the amount deposited.
-        var deposited = BN(0);
+        var balance = BN(0);
         //Get the TXs.
         var txs = await process.core.coin.getTransactions(users[user].address);
 
@@ -210,13 +253,14 @@ setInterval(async () => {
         for (i in txs) {
             //If we haven't handled them...
             if (handled.indexOf(txs[i].txid) === -1) {
-                //Add the TX value to the deposited amount.
-                deposited = deposited.plus(BN(txs[i].amount));
                 //Push the TX ID so we don't handle it again.
                 handled.push(txs[i].txid);
+                await addTransaction(user, txs[i].amount, txs[i].txid, txs[i].category, txs[i].time);
             }
         }
-        
-        await addBalance(user, deposited);
+
+        await fixBalance(user).catch(err => {
+            console.log(err)
+        })
     }
 }, 30 * 1000);

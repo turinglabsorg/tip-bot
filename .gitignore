@@ -1,6 +1,8 @@
 #Environment variables/settings file.
 .env
 settings.json
+sftp.json
+.vscode
 
 #NPM packages.
 node_modules/

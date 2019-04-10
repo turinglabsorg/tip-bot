@@ -26,8 +26,9 @@ async function getTransactions(address) {
 //Sends amount to address.
 async function send(address, amount) {
     try {
-        return await client.sendToAddress(address, amount.toFixed(8));
+        return await client.sendToAddress(address, parseFloat(amount.toFixed(8)));
     } catch(e) {
+        console.log(e)
         return false;
     }
 }
@@ -47,19 +48,18 @@ module.exports = async () => {
     txs = {};
 
     //Get all the TXs the client is hosting, and sort them by address.
-    async function getTXs() {
-        var txsTemp = await client.listTransactions();
-
+    async function getTXs(mode = 'light') {
+        var txsTemp
+        if(mode !== 'light'){
+            txsTemp = await client.listTransactions("",99999999999);
+        }else{
+            txsTemp = await client.listTransactions();
+        }
         //Iterate through each TX.
         for (var i in txsTemp) {
             //If the TX has a new address, init the new array.
             if (typeof(txs[txsTemp[i].address]) === "undefined") {
                 txs[txsTemp[i].address] = [];
-            }
-
-            //Make sure the TX has 1 confirm.
-            if (txsTemp[i].confirmations < 1) {
-                continue;
             }
 
             //Push each TX to the proper address, if it isn't already there.
@@ -75,7 +75,7 @@ module.exports = async () => {
     //Do it every thirty seconds.
     setInterval(getTXs, 30 * 1000);
     //Run it now so everything is ready.
-    await getTXs();
+    await getTXs('hard');
 
     //Get each address and add it to the address array.
     var temp = await client.listReceivedByAddress(0, true);
