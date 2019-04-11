@@ -79,11 +79,6 @@ async function fixAmountSend(sender, tx, amount){
             }
         }
     }
-
-    var totaloutputs = 0
-    for(var ix=0; ix < tx.vout.length; ix++){
-        totaloutputs += tx.vout[ix].value
-    }
     
     if(totalinputs > 0){
         var sent = totalinputs - amount
@@ -91,6 +86,38 @@ async function fixAmountSend(sender, tx, amount){
     }
 
     return false
+}
+
+//Get staking reward
+async function getStakingReward(tx, address){
+    var rawtransaction = await client.getRawTransaction(tx.txid)
+    tx = await client.decodeRawTransaction(rawtransaction)
+
+    var totalinputs = 0
+    for(var i=0; i < tx.vin.length; i++){
+        var vinraw = await client.getRawTransaction(tx.vin[i].txid)
+        var vintx = await client.decodeRawTransaction(vinraw)
+        for(var ix=0; ix < vintx.vout.length; ix++){
+            if(vintx.vout[ix].scriptPubKey.addresses){
+                if(vintx.vout[ix].scriptPubKey.addresses.indexOf(address) !== -1){
+                   totalinputs += vintx.vout[ix].value
+                }
+            }
+        }
+    }
+
+    var totaloutputs = 0
+    for(var i=0; i < tx.vout.length; i++){
+        var vout = tx.vout[i]
+        if(vout.scriptPubKey.addresses){
+            if(vout.scriptPubKey.addresses.indexOf(address) !== -1){
+                totaloutputs += vout.value
+            }
+        }
+    }
+    var stakingreward = totaloutputs - totalinputs
+    stakingreward = parseFloat(stakingreward.toFixed(8))
+    return stakingreward
 }
 
 //Sends amount to address.
@@ -188,6 +215,7 @@ module.exports = async () => {
         listUnspent: listUnspent,
         checkSender: checkSender,
         fixAmountSend: fixAmountSend,
-        getStakingStatus: getStakingStatus
+        getStakingStatus: getStakingStatus,
+        getStakingReward: getStakingReward
     };
 };

@@ -63,8 +63,19 @@ async function setAddress(user, address) {
 
 //Adds reward to database
 
-async function addReward(user, tx){
-    //console.log(tx)
+async function addReward(tx, address){
+    var amount = await process.core.coin.getStakingReward(tx, address)
+    if(amount > 0){
+        var type = 'received'
+        var txid = tx.txid
+        var vout = tx.vout
+        var timestamp = tx.time
+
+        var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "' AND vout='"+vout+"' AND type='"+type+"'");
+        if(!check[0]){
+            await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp, vout]);
+        }
+    }
 }
 
 //Adds transaction to database.
@@ -230,15 +241,18 @@ setInterval(async () => {
         //Iterate over the TXs.
         var i;
         for (i in txs) {
-            if(!txs[i].generated){
-                await addTransaction(txs[i], users[user].address);
-            }else{
-                await addReward(user, txs[i]);
+            if (handled.indexOf(txs[i].txid) === -1) {
+                if(!txs[i].generated){
+                    await addTransaction(txs[i], users[user].address);
+                }else{
+                    await addReward(txs[i], users[user].address);
+                }
             }
+            handled.push(txs[i].txid);
         }
 
         await fixBalance(user).catch(err => {
             console.log(err)
         })
     }
-}, 10 * 1000);
+}, 5 * 1000);
