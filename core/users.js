@@ -42,7 +42,7 @@ async function create(user) {
         balance: BN(0),
         notify: true
     };
-    await process.core.users.setAddress(user, await process.core.coin.createAddress(user));
+    await setAddress(user, await process.core.coin.createAddress(user));
 
     //Return true on success.
     return true;
@@ -61,49 +61,40 @@ async function setAddress(user, address) {
     users[user].address = address;
 }
 
-//Adds transaction to database.
+//Adds reward to database
 
-async function addTransaction(user, amount, txid, type, timestamp = ''){
-    amount =  parseFloat(BN(amount).toFixed(8))
-    if(amount <= 0){
-        return false;
-    }
-    var address = users[user].address
-    if(address.length !== 34){
-        await process.core.users.setAddress(user, await process.core.coin.createAddress(user));
-    }
-
-    if(timestamp === ''){
-        timestamp = Date.now()
-    }
-    
-    if(txid !== 'internaltransaction'){
-        var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "'");
-        if(!check[0]){
-            await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp]);
-        }
-    }else{
-        await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp]);
-    }
-
-    return true;
+async function addReward(user, tx){
+    console.log(tx)
 }
 
-//Adds to an user's balance.
+//Adds transaction to database.
 
-async function addBalance(user, amount) {
-    //Return false if the amount is invalid.
-    amount = parseFloat(amount)
-    if (!(await checkAmount(amount))) {
-        return false;
+async function addTransaction(tx, userAddress = ''){
+    var amount =  parseFloat(BN(tx.amount).toFixed(8))
+    var address = tx.address
+    var txid = tx.txid
+    var timestamp = tx.time
+    var type = tx.category
+    var vout = tx.vout
+
+    if(amount > 0){
+        var checkaddress = await process.core.coin.checkSender(userAddress, tx);
+        if(checkaddress === false){
+            var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "' AND vout='"+vout+"' AND type='"+type+"'");
+            if(!check[0]){
+                await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp, vout]);
+            }
+        }else{
+            var amount = await process.core.coin.fixAmountSend(userAddress, tx, amount);
+            amount = parseFloat(amount.toFixed(8))
+            type = 'send'
+            var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "' AND vout='"+vout+"' AND type='"+type+"'");
+            if(!check[0]){
+                await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp, vout]);
+            }
+        }
     }
 
-    if(amount <= 0){
-        return false;
-    }
-    
-    //await addTransaction(user, parseFloat(amount), "internaltransaction", 'receive')
-    //await fixBalance(user)
     return true;
 }
 
@@ -123,11 +114,10 @@ async function subtractBalance(user, amount) {
     if(amount > balance){
         return false
     }
-    //await addTransaction(user, parseFloat(amount), "internaltransaction", 'send')
-    //await fixBalance(user)
     return true;
 }
 
+//Calculate correct balance
 async function fixBalance(user){
     var address = users[user].address
     if(address.length !== 34){
@@ -166,7 +156,7 @@ async function getAddress(user) {
 //Returns an user's balance
 async function getBalance(user) {
     await fixBalance(user)
-    return users[user].balance;
+    return parseFloat(users[user].balance.toFixed(8))
 }
 
 //Returns an user's notify flag.
@@ -206,11 +196,14 @@ module.exports = async () => {
 
         //Get this user's existing TXs.
         var txs = await process.core.coin.getTransactions(users[rows[i].name].address);
-        //Iterate over each, and push their hashes so we don't process them again.
+        //console.log('PARSING TRANSACTIONS')
         var x;
         for (x in txs) {
-            handled.push(txs[x].txid);
-            await addTransaction(rows[i].name, txs[x].amount, txs[x].txid, txs[x].category, txs[x].time)
+            if(!txs[x].generated){
+                addTransaction(txs[x], rows[i].address)
+            }else{
+                addReward(rows[i].name, txs[x])
+            }
         }
     }
 
@@ -224,7 +217,6 @@ module.exports = async () => {
     return {
         create: create,
         setAddress: setAddress,
-        addBalance: addBalance,
         subtractBalance: subtractBalance,
         setNotified: setNotified,
         addTransaction: addTransaction,
@@ -243,19 +235,16 @@ setInterval(async () => {
             continue;
         }
 
-        //Declare the amount deposited.
-        var balance = BN(0);
         //Get the TXs.
         var txs = await process.core.coin.getTransactions(users[user].address);
-
+        //console.log('PARSING TRANSACTIONS')
         //Iterate over the TXs.
         var i;
         for (i in txs) {
-            //If we haven't handled them...
-            if (handled.indexOf(txs[i].txid) === -1) {
-                //Push the TX ID so we don't handle it again.
-                handled.push(txs[i].txid);
-                await addTransaction(user, txs[i].amount, txs[i].txid, txs[i].category, txs[i].time);
+            if(!txs[i].generated){
+                await addTransaction(txs[i], users[user].address);
+            }else{
+                await addReward(user, txs[i]);
             }
         }
 
@@ -263,4 +252,4 @@ setInterval(async () => {
             console.log(err)
         })
     }
-}, 30 * 1000);
+}, 10 * 1000);

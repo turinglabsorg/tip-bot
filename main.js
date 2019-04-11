@@ -101,6 +101,7 @@ async function main() {
 
     //Declare the commands and load them.
     commands = {
+        staking:     require("./commands/staking.js"),
         help:     require("./commands/help.js"),
         deposit:  require("./commands/deposit.js"),
         balance:  require("./commands/balance.js"),

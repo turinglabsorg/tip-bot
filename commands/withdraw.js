@@ -49,13 +49,18 @@ module.exports = async (msg) => {
     }
 
     //If we made it past the checks, send the funds.
-    var hash = await process.core.coin.send(address, amount);
+    var senderaddress = await process.core.users.getAddress(msg.sender)
+    var hash = await process.core.coin.send(senderaddress, address, amount);
     
     if (typeof(hash) !== "string") {
         msg.obj.reply("Our node failed to create a TX! Is your address invalid?");
         return;
     }
-    await process.core.users.addTransaction(msg.sender, amount, hash, 'send');
-
-    msg.obj.reply("Success! Your TX hash is " + hash + ".");
+    
+    if (hash.length !== 64) {
+        msg.obj.reply("Our node failed to create a TX! Is your address invalid?");
+        return;
+    }
+    
+    msg.obj.reply("Success! Your TXID is " + hash + ".");
 };

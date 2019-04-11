@@ -1,6 +1,6 @@
 //BTC lib.
 var bitcoin = require("bitcoin-core");
-
+var axios = require('axios')
 //BTC RPC Client.
 var client;
 
@@ -23,10 +23,114 @@ async function getTransactions(address) {
     return txs[address];
 }
 
+async function listUnspent(address) {
+    return await client.listUnspent();
+}
+
+async function getStakingStatus() {
+    var rpcuser = process.settings.coin.user
+    var rpcpassword = process.settings.coin.pass
+    
+    var response = 
+    await axios.post(
+        'http://localhost:42223',
+        {
+            id: Math.floor((Math.random() * 100000) + 1),
+            params: [],
+            method: 'getstakingstatus'
+        },
+        {
+            headers: { Authorization: 'Basic ' + Buffer.from(rpcuser + ":" + rpcpassword).toString("base64") }
+        }
+    ).catch(err => {
+        return err
+    })
+    return response.data.result
+}
+
+async function checkSender(sender, tx, debug = false){
+    var rawtransaction = await client.getRawTransaction(tx.txid)
+    tx = await client.decodeRawTransaction(rawtransaction)
+    vinvout = tx.vin[0].vout
+    for(var i=0; i < tx.vin.length; i++){
+        var vinraw = await client.getRawTransaction(tx.vin[i].txid)
+        var vintx = await client.decodeRawTransaction(vinraw)
+        if(vintx.vout[vinvout].scriptPubKey.addresses.indexOf(sender) !== -1){
+            return true
+        }
+    }
+
+    return false
+}
+
+//Fix amount if is change transaction
+async function fixAmountSend(sender, tx, amount){
+    var totalinputs = 0
+    var rawtransaction = await client.getRawTransaction(tx.txid)
+    tx = await client.decodeRawTransaction(rawtransaction)
+
+    for(var i=0; i < tx.vin.length; i++){
+        var vinraw = await client.getRawTransaction(tx.vin[i].txid)
+        var vintx = await client.decodeRawTransaction(vinraw)
+        for(var ix=0; ix < vintx.vout.length; ix++){
+            if(vintx.vout[ix].scriptPubKey.addresses){
+                if(vintx.vout[ix].scriptPubKey.addresses.indexOf(sender) !== -1){
+                   totalinputs += vintx.vout[ix].value
+                }
+            }
+        }
+    }
+
+    var totaloutputs = 0
+    for(var ix=0; ix < tx.vout.length; ix++){
+        totaloutputs += tx.vout[ix].value
+    }
+    
+    if(totalinputs > 0){
+        var sent = totalinputs - amount
+        return sent
+    }
+
+    return false
+}
+
 //Sends amount to address.
-async function send(address, amount) {
+async function send(sender, address, amount) {
     try {
-        return await client.sendToAddress(address, parseFloat(amount.toFixed(8)));
+        var unspent = await client.listUnspent(0,99999);
+        var inputs = []
+        var inputamount = 0
+        for(var i = 0; i < unspent.length; i++){
+            var utxo = unspent[i]
+            if(utxo.address === sender && utxo.spendable === true){
+                if(inputamount < amount){
+                    inputs.push(utxo)
+                    inputamount += utxo.amount
+                }
+            }
+        }
+        if(inputamount >= amount){
+            //Creating raw transaction
+            var changeamount = inputamount - amount - process.settings.coin.withdrawFee 
+            var outputs = {}
+            outputs[address] = parseFloat(amount),
+            outputs[sender] = parseFloat(changeamount)
+            var rawtransaction = await client.createRawTransaction(inputs, outputs);
+
+            //Signin raw transaction
+            var signed = await client.signRawTransaction(rawtransaction);
+
+            if(signed.complete === true){
+                //Sending raw transaction
+                var txid = await client.sendRawTransaction(signed.hex);
+                return txid
+            }else{
+                return false
+            }
+        }else{
+            return false
+        }
+        //return await client.sendToAddress(address, parseFloat(amount.toFixed(8)));
     } catch(e) {
         console.log(e)
         return false;
@@ -48,8 +152,9 @@ module.exports = async () => {
     txs = {};
 
     //Get all the TXs the client is hosting, and sort them by address.
-    async function getTXs(mode = 'light') {
+    async function getTXs(mode = 'hard') {
         var txsTemp
+        txs = {}
         if(mode !== 'light'){
             txsTemp = await client.listTransactions("",99999999999);
         }else{
@@ -61,19 +166,11 @@ module.exports = async () => {
             if (typeof(txs[txsTemp[i].address]) === "undefined") {
                 txs[txsTemp[i].address] = [];
             }
-
-            //Push each TX to the proper address, if it isn't already there.
-            if (
-                txs[txsTemp[i].address].map((tx) => {
-                    return tx.txid;
-                }).indexOf(txsTemp[i].txid) === -1
-            ) {
-                txs[txsTemp[i].address].push(txsTemp[i]);
-            }
+            txs[txsTemp[i].address].push(txsTemp[i]);
         }
     }
-    //Do it every thirty seconds.
-    setInterval(getTXs, 30 * 1000);
+    //Do it every ten seconds.
+    setInterval(getTXs, 10 * 1000);
     //Run it now so everything is ready.
     await getTXs('hard');
 
@@ -88,6 +185,10 @@ module.exports = async () => {
         createAddress: createAddress,
         ownAddress: ownAddress,
         getTransactions: getTransactions,
-        send: send
+        send: send,
+        listUnspent: listUnspent,
+        checkSender: checkSender,
+        fixAmountSend: fixAmountSend,
+        getStakingStatus: getStakingStatus
     };
 };

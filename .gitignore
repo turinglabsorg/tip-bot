@@ -3,6 +3,7 @@
 settings.json
 sftp.json
 .vscode
+settings_lyra.json
 
 #NPM packages.
 node_modules/
