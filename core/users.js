@@ -135,7 +135,7 @@ async function fixBalance(user){
             balance -= parseFloat(rows[i].amount)
         }
     }
-
+    balance = parseFloat(balance.toFixed(8))
     users[user].balance = balance
     await connection.query("UPDATE users SET balance = ? WHERE name = ?", [balance, user]);
 }
