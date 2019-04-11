@@ -64,12 +64,12 @@ async function setAddress(user, address) {
 //Adds reward to database
 
 async function addReward(user, tx){
-    console.log(tx)
+    //console.log(tx)
 }
 
 //Adds transaction to database.
 
-async function addTransaction(tx, userAddress = ''){
+async function addTransaction(tx){
     var amount =  parseFloat(BN(tx.amount).toFixed(8))
     var address = tx.address
     var txid = tx.txid
@@ -78,14 +78,14 @@ async function addTransaction(tx, userAddress = ''){
     var vout = tx.vout
 
     if(amount > 0){
-        var checkaddress = await process.core.coin.checkSender(userAddress, tx);
+        var checkaddress = await process.core.coin.checkSender(tx);
         if(checkaddress === false){
             var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "' AND vout='"+vout+"' AND type='"+type+"'");
             if(!check[0]){
                 await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp, vout]);
             }
         }else{
-            var amount = await process.core.coin.fixAmountSend(userAddress, tx, amount);
+            var amount = await process.core.coin.fixAmountSend(address, tx, amount);
             amount = parseFloat(amount.toFixed(8))
             type = 'send'
             var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "' AND vout='"+vout+"' AND type='"+type+"'");
@@ -194,17 +194,6 @@ module.exports = async () => {
             notify: (rows[i].notify > 0)
         };
 
-        //Get this user's existing TXs.
-        var txs = await process.core.coin.getTransactions(users[rows[i].name].address);
-        //console.log('PARSING TRANSACTIONS')
-        var x;
-        for (x in txs) {
-            if(!txs[x].generated){
-                addTransaction(txs[x], rows[i].address)
-            }else{
-                addReward(rows[i].name, txs[x])
-            }
-        }
     }
 
     //Make sure all the pools have accounts.

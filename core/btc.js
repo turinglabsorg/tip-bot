@@ -48,18 +48,17 @@ async function getStakingStatus() {
     return response.data.result
 }
 
-async function checkSender(sender, tx, debug = false){
+async function checkSender(tx, debug = false){
+    var sender = tx.address
     var rawtransaction = await client.getRawTransaction(tx.txid)
     tx = await client.decodeRawTransaction(rawtransaction)
     vinvout = tx.vin[0].vout
-    for(var i=0; i < tx.vin.length; i++){
-        var vinraw = await client.getRawTransaction(tx.vin[i].txid)
-        var vintx = await client.decodeRawTransaction(vinraw)
-        if(vintx.vout[vinvout].scriptPubKey.addresses.indexOf(sender) !== -1){
-            return true
-        }
-    }
+    var vinraw = await client.getRawTransaction(tx.vin[0].txid)
+    var vintx = await client.decodeRawTransaction(vinraw)
 
+    if(vintx.vout[vinvout].scriptPubKey.addresses.indexOf(sender) !== -1){
+        return true
+    }
     return false
 }
 
