@@ -1,6 +1,6 @@
-# Tip Bot
+# Discord wallet Bot with tipping, staking and more
 
-### A Tip bot made for Discord, with MySQL as a DB.
+### A bot made for Discord, with MySQL as a DB.
 
 This code is based on kayabaNerve Tip Bot (https://github.com/kayabaNerve/tip-bot) with a lot of changes, from staking to true wallet management based on raw transactions. All references to ERC20 are removed.
 
