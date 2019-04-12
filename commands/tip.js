@@ -55,17 +55,14 @@ module.exports = async (msg) => {
         return;
     }
 
-    if (amount === "all") {
-        //Set the amount to the user's balance.
-        amountWFee = await process.core.users.getBalance(from);
-        amount = amountWFee.minus(BN(process.settings.coin.withdrawFee));     
-    //Else...
-    } else {
-        //Parse amount into a BN, yet make sure we aren't dealing with < 1 satoshi.
-        amount = BN(BN(amount).toFixed(process.settings.coin.decimals));
-        amountWFee = amount.plus(BN(process.settings.coin.withdrawFee));
+    if(amount <= 0) {
+        msg.obj.reply("Amount is invalid.");
+        return;
     }
-
+    
+    amount = BN(BN(amount).toFixed(process.settings.coin.decimals));
+    amountWFee = amount.plus(BN(process.settings.coin.withdrawFee));
+    
     //If this is not a valid user, or a pool we're sending to...
     if (
         (

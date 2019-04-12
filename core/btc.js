@@ -123,6 +123,7 @@ async function getStakingReward(tx, address){
 //Sends amount to address.
 async function send(sender, address, amount) {
     try {
+        amount = parseFloat(amount)
         var unspent = await client.listUnspent(0,99999);
         var inputs = []
         var inputamount = 0
@@ -156,7 +157,6 @@ async function send(sender, address, amount) {
         }else{
             return false
         }
-        //return await client.sendToAddress(address, parseFloat(amount.toFixed(8)));
     } catch(e) {
         console.log(e)
         return false;
