@@ -63,18 +63,18 @@ async function checkSender(tx, debug = false){
 }
 
 //Fix amount if is change transaction
-async function fixAmountSend(sender, tx, amount){
-    var totalinputs = 0
+async function fixAmountSend(address, tx, amount){
     var rawtransaction = await client.getRawTransaction(tx.txid)
     tx = await client.decodeRawTransaction(rawtransaction)
 
+    var totalinputs = 0
     for(var i=0; i < tx.vin.length; i++){
         var vinraw = await client.getRawTransaction(tx.vin[i].txid)
         var vintx = await client.decodeRawTransaction(vinraw)
-        for(var ix=0; ix < vintx.vout.length; ix++){
-            if(vintx.vout[ix].scriptPubKey.addresses){
-                if(vintx.vout[ix].scriptPubKey.addresses.indexOf(sender) !== -1){
-                   totalinputs += vintx.vout[ix].value
+        for(var ix=0; ix < tx.vin.length; ix++){
+            if(vintx.vout[tx.vin[ix].vout].scriptPubKey.addresses){
+                if(vintx.vout[tx.vin[ix].vout].scriptPubKey.addresses.indexOf(address) !== -1){
+                   totalinputs += vintx.vout[tx.vin[ix].vout].value
                 }
             }
         }
@@ -92,20 +92,20 @@ async function fixAmountSend(sender, tx, amount){
 async function getStakingReward(tx, address){
     var rawtransaction = await client.getRawTransaction(tx.txid)
     tx = await client.decodeRawTransaction(rawtransaction)
-
+    
     var totalinputs = 0
     for(var i=0; i < tx.vin.length; i++){
         var vinraw = await client.getRawTransaction(tx.vin[i].txid)
         var vintx = await client.decodeRawTransaction(vinraw)
-        for(var ix=0; ix < vintx.vout.length; ix++){
-            if(vintx.vout[ix].scriptPubKey.addresses){
-                if(vintx.vout[ix].scriptPubKey.addresses.indexOf(address) !== -1){
-                   totalinputs += vintx.vout[ix].value
+        for(var ix=0; ix < tx.vin.length; ix++){
+            if(vintx.vout[tx.vin[ix].vout].scriptPubKey.addresses){
+                if(vintx.vout[tx.vin[ix].vout].scriptPubKey.addresses.indexOf(address) !== -1){
+                   totalinputs += vintx.vout[tx.vin[ix].vout].value
                 }
             }
         }
     }
-
+    
     var totaloutputs = 0
     for(var i=0; i < tx.vout.length; i++){
         var vout = tx.vout[i]
