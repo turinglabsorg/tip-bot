@@ -7,24 +7,28 @@ var botsymbol = process.settings.discord.symbol;
 
 //Default help tect.
 var help = `
-**TIPBOT COMMAND LIST**
+To run a command, either preface it with ` + botsymbol + ` (` + botsymbol + `deposit, ` + botsymbol + `tip) 
+This bot does use decimals, and has 8 decimals of accuracy. 
 
-To run a command, either preface it with "` + botsymbol + `" ("!deposit", "!tip") or ping the bot ("<@${bot}> deposit", "<@${bot}> tip").
+\`\`\`
+` + botsymbol + `balance 
+\`\`\`
+Prints your **balance**. 
 
-This bot does use decimals, and has ${decimals} decimals of accuracy. You can also use "all" instead of any AMOUNT to tip/withdraw your entire balance.
+\`\`\`
+` + botsymbol + `tip <@PERSON> <AMOUNT>
+\`\`\`
+**Tips** the person that amount of LYRA. 
 
--- *` + botsymbol + `balance*
-Prints your balance.
+\`\`\` 
+` + botsymbol + `withdraw <AMOUNT> <ADDRESS>
+\`\`\` 
+**Withdraws** AMOUNT to ADDRESS, charging a 0.01 LYRA fee. 
 
--- *` + botsymbol + `tip <@PERSON> <AMOUNT>*
-Tips the person that amount of ${symbol}.
-
--- *` + botsymbol + `withdraw <AMOUNT> <ADDRESS>*
-Withdraws AMOUNT to ADDRESS, charging a ${fee} ${symbol} fee.
-
--- *` + botsymbol + `deposit*
-Prints your personal deposit address.
-`;
+\`\`\` 
+` + botsymbol + `deposit 
+\`\`\`
+Prints your personal deposit **address**.`
 
 module.exports = async (msg) => {
     msg.obj.author.send({

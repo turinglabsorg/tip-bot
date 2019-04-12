@@ -54,7 +54,22 @@ async function handleMessage(msg) {
         (await process.core.users.getNotify(sender))
     ) {
         //Give them the notified warning.
-        msg.reply("By continuing to use this bot, you agree to release the creator, owners, all maintainers of the bot, and the " + process.settings.coin.symbol + " Team from any legal liability.");
+        msg.reply(`Ave! :raised_hand: 
+        I'm **CaioTitus**! A bot created by **Scrypta Team** at your service! :robot:
+        
+        You can use me for **LYRA** deposit, send and tip!
+        
+        The command you just gave me was used to create your account! To know the list of commands, you can type 
+        
+        ```
+         *help
+        ```
+        
+        Every transaction you make through me, will be written directly inside the Scrypta blockchain, so you can check your operations using BlockExplorer! 
+        
+        **DISCLAIMER**:
+        *By continuing to use this bot, you agree to release the creator, owners, all maintainers of the bot, and the Scrypta Team from any legal liability.*
+        `);
         //Mark them as notified.
         await process.core.users.setNotified(sender);
         return;
