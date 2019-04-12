@@ -87,15 +87,6 @@ module.exports = async (msg) => {
         return;
     }
 
-    //Check to make sure the sender is allowed to run a giveaway.
-    if (
-        (pools.giveaways.admins.indexOf(msg.sender) === -1) &&
-        (pools.giveaways.members.indexOf(msg.sender) === -1)
-    ) {
-        msg.obj.reply("You don't have permission to run a giveaway.");
-        return;
-    }
-
     //Extract the arguments.
     var time = msg.text[1];
     time = {

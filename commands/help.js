@@ -6,8 +6,7 @@ var fee = process.settings.coin.withdrawFee;
 var botsymbol = process.settings.discord.symbol;
 
 //Default help tect.
-var help = `
-To run a command, either preface it with ` + botsymbol + ` (` + botsymbol + `deposit, ` + botsymbol + `tip) 
+var help = `To run a command, either preface it with ` + botsymbol + ` (` + botsymbol + `deposit, ` + botsymbol + `tip) 
 This bot does use decimals, and has 8 decimals of accuracy. 
 
 \`\`\`

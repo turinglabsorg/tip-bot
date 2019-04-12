@@ -61,9 +61,9 @@ async function handleMessage(msg) {
         
         The command you just gave me was used to create your account! To know the list of commands, you can type 
         
-        ```
+        \`\`\`
          *help
-        ```
+        \`\`\`
         
         Every transaction you make through me, will be written directly inside the Scrypta blockchain, so you can check your operations using BlockExplorer! 
         
