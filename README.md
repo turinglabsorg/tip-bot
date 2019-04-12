@@ -1,8 +1,8 @@
 # Tip Bot
 
-### A BTC and ERC20 Tip bot made for Discord, with MySQL as a DB.
+### A Tip bot made for Discord, with MySQL as a DB.
 
-This code is based off the modular (and not secure) ERC20 Tip Bot [here](https://github.com/kayabaNerve/erc20-tip-bot-old-unsafe). This one does not claim to be modular, yet it should be easy to modify this bot to work off other databases or coin APIs.
+This code is based on kayabaNerve Tip Bot (https://github.com/kayabaNerve/tip-bot) with a lot of changes, from staking to true wallet management based on raw transactions. All references to ERC20 are removed.
 
 To install the bot:
 - If the coin is BTC based:
@@ -17,18 +17,6 @@ To install the bot:
         - `port` set to the daemon's RPC port (8337).
         - `user` set to the username you set in the conf file ("user").
         - `pass` set to the password you set in the conf file ("pass").
-- If the coin is an ERC20:
-    - Install `geth`.
-    - Run `geth --syncmode "light"` to start Geth with light sync on.
-    - Move `erc20Settings.json` to `settings.json`.
-    - Edit the `settings.json` file's `coin` var to have:
-        - `type` set to `"erc20"`.
-        - `symbol` set to the coin's symbol ("ERC").
-        - `decimals` set to the amount of the coin's decimals (18).
-        - `ipc` set to Geth's IPC file's path ("/home/user/.ethereum/geth.ipc").
-    - Edit the `settings.json` file's `coin.addresses` var to have:
-        - `wallet` set to an account address on the Geth node, with a password of "", that will host all the Ether used to fund TXs.
-        - `contract` set to the ERC20's contract address.
 - Install MySQL.
     - Create a database.
     - Create a table with `name VARCHAR(64), address VARCHAR(64), balance VARCHAR(64), notify tinyint(1)`.
@@ -37,6 +25,7 @@ To install the bot:
         - `table` set to the name of the table you made for the bot.
         - `user` set to the name of a MySQL user with access to the DB.
         - `pass` set to the password of that MySQL user.
+    - Create a table with `txid VARCHAR(64), address VARCHAR(64), amount VARCHAR(64), type VARCHAR(64), timestamp VARCHAR(64), vout tinyint(1)`. and call it "transactions"
 - Create a Discord Bot User.
     - Go to https://discordapp.com/developers/applications/me.
     - Click `New App`.
@@ -57,8 +46,9 @@ To install the bot:
 
 All pools must be created via settings.json. All edits to the list of admins must also be done there. Members can be added and removed with `!pool NAME add @USER` and `!pool NAME remove @USER`, where NAME is the name of the pool, and @USER is a ping of the Discord user. To send from a pool, use `!tip POOL @USER AMOUNT`.
 
-There is also a giveaway command to run giveaways with. If you don't want it, either don't setup the `giveaways` pool or comment out the line that loads it in `main.js`. To use it, run `!giveaway Ts Ww A`, where T is the time in seconds (or use "m" as a suffix for minutes), W is the amount of winners, and A is the amount each win. The amount will come from the `giveaways` pool and be tipped out to the winners.
+There is also a giveaway command to run giveaways with. If you don't want it, either don't setup the `giveaways` pool or comment out the line that loads it in `main.js`. To use it, run `!giveaway Ts Ww A`, where T is the time in seconds (or use "m" as a suffix for minutes), W is the amount of winners, and A is the amount each win. The amount will come from the `giveaways` pool and be tipped out to the winners. Giveaway pool is not restricted to admins anymore.
 
 Neither of these commands are documented as they are only to be used by whoever runs the bot, and that is not most people. It's not for security via obscurity, but rather because a long help file where half the commands aren't needed is annoying.
 
-Want to donate? 0xA0F7aAAF3161c5611a904263bFfe45C92394Da44
+Want to donate to kayabaNerve? 0xA0F7aAAF3161c5611a904263bFfe45C92394Da44
+Want to donate to Turinglabs? I accept BTC => 3G4oGSVuY2DmAUSzmvj8qJ7vd9KSaTR2NP
