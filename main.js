@@ -54,10 +54,10 @@ async function handleMessage(msg) {
         (await process.core.users.getNotify(sender))
     ) {
         //Give them the notified warning.
-        msg.reply(`Ave! :raised_hand: 
-        I'm **CaioTitus**! A bot created by **Scrypta Team** at your service! :robot:
+        msg.reply(`Hi! :raised_hand: 
+        I'm **`+process.settings.discord.name+`**! A bot created by **TuringLabs** at your service! :robot:
         
-        You can use me for **LYRA** deposit, send and tip!
+        You can use me for **`+process.settings.coin.symbol+`** deposit, send and tip!
         
         The command you just gave me was used to create your account! To know the list of commands, you can type 
         
@@ -65,10 +65,10 @@ async function handleMessage(msg) {
          *help
         \`\`\`
         
-        Every transaction you make through me, will be written directly inside the Scrypta blockchain, so you can check your operations using BlockExplorer! 
+        Every transaction you make through me, will be written directly inside the `+process.settings.coin.name+` blockchain, so you can check your operations using our BlockExplorer! 
         
         **DISCLAIMER**:
-        *By continuing to use this bot, you agree to release the creator, owners, all maintainers of the bot, and the Scrypta Team from any legal liability.*
+        *By continuing to use this bot, you agree to release the creator, owners, all maintainers of the bot, and TuringLabs from any legal liability.*
         `);
         //Mark them as notified.
         await process.core.users.setNotified(sender);

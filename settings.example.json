@@ -2,11 +2,13 @@
     "discord": {
         "token": "BOT-TOKEN",
         "user": "BOT-USERID",
-        "symbol": "#"
+        "symbol": "#",
+        "name": "BOTNAMEINHELP"
     },
     
     "coin": {
         "type": "btc",
+        "name": "COINNAME",
         "symbol": "TICKER",
         "decimals": 8,
         "withdrawFee": 0.01,
