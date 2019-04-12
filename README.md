@@ -51,4 +51,5 @@ There is also a giveaway command to run giveaways with. If you don't want it, ei
 Neither of these commands are documented as they are only to be used by whoever runs the bot, and that is not most people. It's not for security via obscurity, but rather because a long help file where half the commands aren't needed is annoying.
 
 Want to donate to kayabaNerve? 0xA0F7aAAF3161c5611a904263bFfe45C92394Da44
+
 Want to donate to Turinglabs? I accept BTC => 3G4oGSVuY2DmAUSzmvj8qJ7vd9KSaTR2NP
