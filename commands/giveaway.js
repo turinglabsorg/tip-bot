@@ -162,12 +162,10 @@ module.exports = async (msg) => {
     //Calculate the total amount;
     var total = amount.times(winners);
     //Verify the giveaways pool may have enough money.
-    if (!(await process.core.users.subtractBalance("giveaways", total))) {
+    if (!(await process.core.users.subtractBalance(msg.sender, total))) {
         msg.obj.reply("The giveaways fund doesn't have enough money.");
         return;
     }
-    //Add it back in case the giveaway fails. We subtract the total at the end.
-    await process.core.users.addBalance("giveaways", total);
 
     //Send the message.
     var giveaway = await msg.obj.channel.send({
@@ -264,7 +262,10 @@ module.exports = async (msg) => {
             //Create their account if they don't have one.
             await process.core.users.create(whoWon[i]);
             //Add the amount to their balance.
-            await process.core.users.addBalance(whoWon[i], amount);
+
+            var senderaddress = await process.core.users.getAddress(msg.sender)
+            var useraddress = await process.core.users.getAddress(whoWon[i])
+            var hash = await process.core.coin.send(senderaddress, useraddress, amount);
         }
 
         //Send a new message to the channel about the winners.
