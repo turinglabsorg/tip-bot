@@ -9,7 +9,7 @@ To install the bot:
     - Install your 'BTCd'.
     - Edit the conf file to add `server=1`, `rpcuser=user`, and `rpcpass=pass` (with your own username and password).
     - Start the daemon.
-    - Move `btcSettings.json` to `settings.json`.
+    - Move `settings.example.json` to `settings.json`.
     - Edit the `settings.json` file's `coin` var to have:
         - `type` set to `"BTC"`.
         - `symbol` set to the coin's symbol ("BTC").
