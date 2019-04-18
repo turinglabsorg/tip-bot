@@ -25,7 +25,6 @@ To install the bot:
         - `table` set to the name of the table you made for the bot.
         - `user` set to the name of a MySQL user with access to the DB.
         - `pass` set to the password of that MySQL user.
-    - Create a table with `txid VARCHAR(64), address VARCHAR(64), amount VARCHAR(64), type VARCHAR(64), timestamp VARCHAR(64), vout tinyint(1)`. and call it "transactions"
 - Create a Discord Bot User.
     - Go to https://discordapp.com/developers/applications/me.
     - Click `New App`.

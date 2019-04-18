@@ -61,56 +61,6 @@ async function setAddress(user, address) {
     users[user].address = address;
 }
 
-//Adds reward to database
-
-async function addReward(tx, address){
-    if (handled.indexOf(tx.txid) === -1) {
-        handled.push(tx.txid);
-        var type = 'staked'
-        var txid = tx.txid
-        var vout = tx.vout
-        var timestamp = tx.time
-
-        var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "' AND vout='"+vout+"' AND type='"+type+"'");
-        if(!check[0]){
-            var amount = await process.core.coin.getStakingReward(tx, address)
-            if(amount > 0){
-                await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp, vout]);
-            }
-        }
-    }
-}
-
-//Adds transaction to database.
-
-async function addTransaction(tx){
-    var amount =  parseFloat(BN(tx.amount).toFixed(8))
-    var address = tx.address
-    var txid = tx.txid
-    var timestamp = tx.time
-    var type = tx.category
-    var vout = tx.vout
-
-    if(amount > 0){
-        var checkaddress = await process.core.coin.checkSender(tx);
-        if(checkaddress === false){
-            var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "' AND vout='"+vout+"' AND type='"+type+"'");
-            if(!check[0]){
-                await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp, vout]);
-            }
-        }else{
-            var amount = await process.core.coin.fixAmountSend(address, tx, amount);
-            amount = parseFloat(amount.toFixed(8))
-            type = 'send'
-            var check = await connection.query("SELECT * FROM transactions WHERE txid = '" + txid + "' AND address = '" + address + "' AND vout='"+vout+"' AND type='"+type+"'");
-            if(!check[0]){
-                await connection.query("INSERT INTO transactions VALUES (?, ?, ?, ?, ?, ?)", [txid, address, amount, type, timestamp, vout]);
-            }
-        }
-    }
-
-    return true;
-}
 
 //Subtracts from an user's balance.
 async function subtractBalance(user, amount) {
@@ -137,18 +87,30 @@ async function fixBalance(user){
     if(address.length !== 34){
         return false;
     }
-    var rows = await connection.query("SELECT * FROM transactions WHERE address = '" + address + "'");
-    //Iterate over each row, creating an user object for each.
     var i;
     var balance = 0;
-    for (i in rows) {
-        if(rows[i].type === 'receive' || rows[i].type === 'staked'){
-            balance += parseFloat(rows[i].amount)
-        }
-        if(rows[i].type === 'send'){
-            balance -= parseFloat(rows[i].amount)
+    var parsed = [];
+    var unspent = await process.core.coin.listUnspent(0,99999);
+    for(var i = 0; i < unspent.length; i++){
+        var utxo = unspent[i]
+        if(utxo.address === address && utxo.spendable === true){
+            balance += utxo.amount
+            parsed.push(utxo.txid)
         }
     }
+    
+    var txs = await process.core.coin.getTransactions(address);
+    //console.log('PARSING TRANSACTIONS')
+    //Iterate over the TXs.
+    var i;
+    for (i in txs) {
+        if(txs[i].generated && txs[i].address === address && txs[i].confirmations < 60 && txs[i].category === "receive"){
+            if(parsed.indexOf(txs[i].txid) === -1){
+                balance += txs[i].amount 
+            }
+        }
+    }
+
     balance = parseFloat(balance.toFixed(8))
     users[user].balance = balance
     await connection.query("UPDATE users SET balance = ? WHERE name = ?", [balance, user]);
@@ -222,36 +184,18 @@ module.exports = async () => {
         setAddress: setAddress,
         subtractBalance: subtractBalance,
         setNotified: setNotified,
-        addTransaction: addTransaction,
         getAddress: getAddress,
         getBalance: getBalance,
         getNotify: getNotify
     };
 };
 
-//Every thirty seconds, check the TXs of each user.
+//Every five seconds, check the TXs of each user.
 setInterval(async () => {
-    //console.log('FETCHING INCOMING TRANSACTIONS')
     for (var user in users) {
         //If that user doesn't have an address, continue.
         if (users[user].address === false) {
             continue;
-        }
-
-        //Get the TXs.
-        var txs = await process.core.coin.getTransactions(users[user].address);
-        //console.log('PARSING TRANSACTIONS')
-        //Iterate over the TXs.
-        var i;
-        for (i in txs) {
-            if (handled.indexOf(txs[i].txid) === -1) {
-                if(!txs[i].generated){
-                    await addTransaction(txs[i], users[user].address);
-                }else{
-                    await addReward(txs[i], users[user].address);
-                }
-            }
-            //handled.push(txs[i].txid);
         }
 
         await fixBalance(user).catch(err => {
